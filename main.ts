@@ -162,6 +162,28 @@ class Canvas {
       }
     }
   }
+  // scanline fill of MULTIPLE polygons with the even-odd rule in one pass:
+  // crossings from every contour are pooled per row, so holes (counters
+  // in glyphs like "o", "e", "a") stay hollow instead of being painted over.
+  fillEvenOdd(polys: number[][][], c: RGB): void {
+    let minY = Infinity, maxY = -Infinity;
+    for (const pts of polys) for (const p of pts) { minY = Math.min(minY, p[1]); maxY = Math.max(maxY, p[1]); }
+    for (let y = Math.ceil(minY); y <= Math.floor(maxY); y++) {
+      const xs: number[] = [];
+      for (const pts of polys) {
+        for (let i = 0; i < pts.length; i++) {
+          const a = pts[i], b = pts[(i + 1) % pts.length];
+          if ((a[1] <= y && b[1] > y) || (b[1] <= y && a[1] > y)) {
+            xs.push(a[0] + ((y - a[1]) * (b[0] - a[0])) / (b[1] - a[1]));
+          }
+        }
+      }
+      xs.sort((p, q) => p - q);
+      for (let k = 0; k + 1 < xs.length; k += 2) {
+        for (let x = Math.ceil(xs[k]); x <= Math.floor(xs[k + 1]); x++) this.px(x, y, c);
+      }
+    }
+  }
   // 5-pointed star, outer radius R, inner radius r
   star5(cx: number, cy: number, R: number, c: RGB): void {
     const pts: number[][] = [];
@@ -181,10 +203,10 @@ class Canvas {
       for (let k = 0; k < 3; k++) this.buf[o + k] = Math.max(0, this.buf[o + k] - a);
     }
   }
-  // fine full-page fibre noise on a 2px grid (deterministic, subtle)
+  // fine full-page fibre noise on a 4px grid (deterministic, subtle)
   fibre(amp: number): void {
-    for (let y = 0; y < this.h; y += 2) {
-      for (let x = 0; x < this.w; x += 2) {
+    for (let y = 0; y < this.h; y += 4) {
+      for (let x = 0; x < this.w; x += 4) {
         const d = Math.floor((rnd() * 2 - 1) * amp);
         if (d === 0) continue;
         const o = (y * this.w + x) * 3;
@@ -357,14 +379,19 @@ class TTF {
   }
 }
 
-// rasterize one glyph outline into the canvas at pixel size `size`
+// rasterize one glyph outline into the canvas at pixel size `size`.
+// Antialiased: the glyph is rendered at 2x into an offscreen buffer with a
+// single even-odd fill across ALL contours (so counters in "o"/"e"/"a"
+// stay hollow), then downsampled with a 2x2 box filter and blended by
+// coverage. This keeps small text solid (no dropped sub-pixel strokes)
+// and large text smooth. Fully deterministic.
 function drawGlyph(cv: Canvas, font: TTF, cp: number, size: number, x0: number, yBase: number, color: RGB): number {
   const gi = font.glyphIndex(cp);
   const g = font.loadGlyph(gi);
   const scale = size / font.units;
   const adv = g.adv * scale;
   if (g.pts.length === 0) return adv;
-  // flatten quadratic curves into line segments
+  // flatten quadratic curves into line segments (final coords)
   const polys: number[][][] = [];
   for (const contour of g.pts) {
     const poly: number[][] = [];
@@ -384,7 +411,44 @@ function drawGlyph(cv: Canvas, font: TTF, cp: number, size: number, x0: number, 
     }
     if (poly.length > 2) polys.push(poly);
   }
-  for (const poly of polys) cv.poly(poly, color);
+  if (polys.length === 0) return adv;
+  // glyph bbox (final coords)
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const poly of polys) for (const [px, py] of poly) {
+    minX = Math.min(minX, px); maxX = Math.max(maxX, px);
+    minY = Math.min(minY, py); maxY = Math.max(maxY, py);
+  }
+  const SS = 2, pad = 1;
+  const bx0 = Math.floor(minX) - pad, by0 = Math.floor(minY) - pad;
+  const bx1 = Math.ceil(maxX) + pad, by1 = Math.ceil(maxY) + pad;
+  const bw = bx1 - bx0, bh = by1 - by0;
+  if (bw <= 0 || bh <= 0) return adv;
+  // render at 2x into an offscreen buffer (black bg, white fill)
+  const tmp = new Canvas(bw * SS, bh * SS, [0, 0, 0]);
+  const sp = polys.map((poly) => poly.map(([px, py]) => [(px - bx0) * SS, (py - by0) * SS]));
+  tmp.fillEvenOdd(sp, WHITE);
+  // downsample 2x2 box filter -> coverage, blend onto the canvas
+  for (let yy = 0; yy < bh; yy++) {
+    for (let xx = 0; xx < bw; xx++) {
+      let sum = 0;
+      for (let sy = 0; sy < SS; sy++) {
+        let ro = ((yy * SS + sy) * tmp.w + xx * SS) * 3;
+        for (let sx = 0; sx < SS; sx++) { sum += tmp.buf[ro]; ro += 3; }
+      }
+      if (sum === 0) continue;
+      const dx = bx0 + xx, dy = by0 + yy;
+      if (dx < 0 || dy < 0 || dx >= cv.w || dy >= cv.h) continue;
+      const a = sum / (SS * SS * 255);
+      const o = (dy * cv.w + dx) * 3;
+      if (a >= 0.999) {
+        cv.buf[o] = color[0]; cv.buf[o + 1] = color[1]; cv.buf[o + 2] = color[2];
+      } else {
+        cv.buf[o] = Math.round(cv.buf[o] + (color[0] - cv.buf[o]) * a);
+        cv.buf[o + 1] = Math.round(cv.buf[o + 1] + (color[1] - cv.buf[o + 1]) * a);
+        cv.buf[o + 2] = Math.round(cv.buf[o + 2] + (color[2] - cv.buf[o + 2]) * a);
+      }
+    }
+  }
   return adv;
 }
 
@@ -468,25 +532,51 @@ function heroKyiv(cv: Canvas, x: number, y: number, w: number, h: number): void 
   cv.line(x + w * 0.08, y + 10, x + w * 0.30, y + 46, GOLD, 2);
   cv.line(x + w * 0.55, y + 8, x + w * 0.72, y + 40, GOLD, 2);
   cv.star5(x + w * 0.30, y + 46, 7, GOLD); cv.star5(x + w * 0.72, y + 40, 6, GOLD);
-  // Zelensky figure, centre-left
-  const fx = x + w * 0.42, fy = y + 34;
-  cv.ellipse(fx, fy + 52, 52, 34, OLIVE); // shoulders / jacket
-  cv.poly([[fx - 14, fy + 24], [fx, fy + 40], [fx + 14, fy + 24]], [232, 228, 218]); // shirt V
-  cv.ellipse(fx, fy, 25, 29, [232, 190, 150]); // face
-  cv.poly([[fx - 25, fy - 8], [fx - 24, fy - 26], [fx - 10, fy - 30], [fx + 10, fy - 30], [fx + 24, fy - 26], [fx + 25, fy - 8], [fx + 18, fy - 16], [fx - 18, fy - 16]], [74, 58, 40]); // hair
-  cv.line(fx - 15, fy - 6, fx - 5, fy - 6, [60, 48, 36], 2); // brows
-  cv.line(fx + 5, fy - 6, fx + 15, fy - 6, [60, 48, 36], 2);
-  cv.circle(fx - 10, fy + 1, 2, WHITE); cv.circle(fx - 10, fy + 1, 1, INK);
-  cv.circle(fx + 10, fy + 1, 2, WHITE); cv.circle(fx + 10, fy + 1, 1, INK);
-  cv.line(fx, fy + 4, fx - 2, fy + 12, [190, 150, 118], 2);
-  cv.line(fx - 8, fy + 19, fx + 8, fy + 19, [140, 96, 70], 2); // mouth
-  // mic at his right shoulder
-  cv.line(fx + 34, fy + 62, fx + 24, fy + 34, [30, 30, 30], 3);
-  cv.circle(fx + 23, fy + 30, 7, [40, 40, 40]);
+  // Zelensky figure, centre-left — detailed bust portrait, face fully in frame
+  const fx = x + w * 0.42, fy = y + 40; // face centre
+  // neck
+  cv.rect(fx - 8, fy + 24, 16, 12, [214, 168, 128]);
+  // jacket: shoulders (bottom cropped by the banner below the scene, like a bust)
+  cv.ellipse(fx, fy + 62, 56, 26, OLIVE);
+  // lapels, darker olive
+  cv.poly([[fx - 18, fy + 36], [fx - 2, fy + 48], [fx - 12, fy + 70], [fx - 24, fy + 46]], [76, 84, 42]);
+  cv.poly([[fx + 18, fy + 36], [fx + 2, fy + 48], [fx + 12, fy + 70], [fx + 24, fy + 46]], [76, 84, 42]);
+  // white shirt V + collar
+  cv.poly([[fx - 12, fy + 34], [fx, fy + 50], [fx + 12, fy + 34], [fx + 6, fy + 32], [fx, fy + 40], [fx - 6, fy + 32]], [240, 236, 228]);
+  // jacket pocket (left chest) + buttons
+  cv.rect(fx - 44, fy + 56, 14, 8, [76, 84, 42]);
+  cv.circle(fx, fy + 58, 1, [60, 66, 34]);
+  cv.circle(fx, fy + 66, 1, [60, 66, 34]);
+  // ears
+  cv.ellipse(fx - 23, fy + 2, 4, 6, [232, 190, 150]);
+  cv.ellipse(fx + 23, fy + 2, 4, 6, [232, 190, 150]);
+  // face
+  cv.ellipse(fx, fy, 23, 26, [232, 190, 150]);
+  // hair: shaped cap with a side parting, fully inside the frame
+  cv.poly([[fx - 24, fy - 18], [fx - 23, fy - 30], [fx - 12, fy - 36], [fx + 12, fy - 36], [fx + 23, fy - 30], [fx + 24, fy - 18], [fx + 16, fy - 26], [fx - 16, fy - 26]], [74, 58, 40]);
+  cv.line(fx - 4, fy - 33, fx + 8, fy - 28, [52, 40, 28], 1); // parting
+  // brows
+  cv.line(fx - 14, fy - 8, fx - 5, fy - 9, [60, 48, 36], 2);
+  cv.line(fx + 5, fy - 9, fx + 14, fy - 8, [60, 48, 36], 2);
+  // eyes: white + pupil
+  cv.ellipse(fx - 10, fy - 1, 3.5, 2.5, WHITE); cv.circle(fx - 10, fy - 1, 1, INK);
+  cv.ellipse(fx + 10, fy - 1, 3.5, 2.5, WHITE); cv.circle(fx + 10, fy - 1, 1, INK);
+  // nose wedge
+  cv.poly([[fx - 1, fy + 2], [fx + 1, fy + 2], [fx + 2, fy + 11], [fx - 2, fy + 11]], [190, 150, 118]);
+  // mouth: serious, slight curve
+  cv.line(fx - 7, fy + 17, fx - 3, fy + 18, [140, 96, 70], 2);
+  cv.line(fx - 3, fy + 18, fx + 3, fy + 18, [140, 96, 70], 2);
+  cv.line(fx + 3, fy + 18, fx + 7, fy + 17, [140, 96, 70], 2);
+  // chin shadow
+  cv.line(fx - 4, fy + 22, fx + 4, fy + 22, [200, 160, 125], 1);
+  // mic in front of his chest
+  cv.line(fx + 40, fy + 72, fx + 33, fy + 44, [30, 30, 30], 3);
+  cv.circle(fx + 32, fy + 38, 7, [40, 40, 40]);
+  cv.circle(fx + 32, fy + 38, 4, [96, 96, 96]);
   // labels
   cv.rect(x + 8, y + 8, 52, 18, RED); drawText(cv, sansB, 11, x + 34, y + 21, "KYIV", WHITE, "c");
   cv.rect(x + 8, y + h - 24, 108, 16, WHITE); drawText(cv, sansB, 9, x + 62, y + h - 12, "3 BRIDGES HIT", INK, "c");
-  cv.rect(x + w - 122, y + h - 24, 110, 16, NAVY); drawText(cv, sansB, 8, x + w - 67, y + h - 12, "OFFICIALS' COUNT", WHITE, "c");
+  cv.rect(x + w - 126, y + h - 24, 118, 16, NAVY); drawText(cv, sansB, 8, x + w - 67, y + h - 12, "OFFICIALS' COUNT", WHITE, "c");
 }
 // Hero 2: Cyclone Akvan landfall, Odisha coast
 function heroCyclone(cv: Canvas, x: number, y: number, w: number, h: number): void {
