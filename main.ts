@@ -486,7 +486,7 @@ function heroKyiv(cv: Canvas, x: number, y: number, w: number, h: number): void 
   // labels
   cv.rect(x + 8, y + 8, 52, 18, RED); drawText(cv, sansB, 11, x + 34, y + 21, "KYIV", WHITE, "c");
   cv.rect(x + 8, y + h - 24, 108, 16, WHITE); drawText(cv, sansB, 9, x + 62, y + h - 12, "3 BRIDGES HIT", INK, "c");
-  cv.rect(x + w - 118, y + h - 24, 110, 16, NAVY); drawText(cv, sansB, 8, x + w - 63, y + h - 12, "OFFICIALS' COUNT", WHITE, "c");
+  cv.rect(x + w - 122, y + h - 24, 110, 16, NAVY); drawText(cv, sansB, 8, x + w - 67, y + h - 12, "OFFICIALS' COUNT", WHITE, "c");
 }
 // Hero 2: Cyclone Akvan landfall, Odisha coast
 function heroCyclone(cv: Canvas, x: number, y: number, w: number, h: number): void {
@@ -509,10 +509,10 @@ function heroCyclone(cv: Canvas, x: number, y: number, w: number, h: number): vo
     cv.line(cx - ((cx - gx) * t) / 10, cy - ((cy - gy) * t) / 10, cx - ((cx - gx) * (t + 1)) / 10, cy - ((cy - gy) * (t + 1)) / 10, RED, 2);
   }
   cv.circle(gx, gy, 5, RED); cv.circle(gx, gy, 2, WHITE);
-  drawText(cv, sansB, 9, gx + 10, gy + 3, "GOPALPUR", INK);
-  // rain slashes on the sea
+  drawText(cv, sansB, 9, gx - 14, gy + 3, "GOPALPUR", INK, "r");
+  // rain slashes on the sea (kept clear of the CYCLONE AKVAN banner above and the BAY OF BENGAL label below)
   for (let i = 0; i < 14; i++) {
-    const rx = x + w * (0.55 + rnd() * 0.4), ry = y + h * (0.1 + rnd() * 0.8);
+    const rx = x + w * (0.55 + rnd() * 0.4), ry = y + h * (0.25 + rnd() * 0.4);
     cv.line(rx, ry, rx - 3, ry + 7, WHITE, 1);
   }
   cv.rect(x + w * 0.42, y + 8, 138, 18, RED); drawText(cv, sansB, 11, x + w * 0.42 + 69, y + 21, "CYCLONE AKVAN", WHITE, "c");
@@ -523,7 +523,7 @@ function heroCyclone(cv: Canvas, x: number, y: number, w: number, h: number): vo
 function heroSelloff(cv: Canvas, x: number, y: number, w: number, h: number): void {
   cv.rect(x, y, w, h, NAVY);
   for (let i = 1; i < 4; i++) cv.line(x + 8, y + (h * i) / 4, x + w * 0.58, y + (h * i) / 4, [52, 64, 104], 1);
-  const pts = [[0.02, 0.18], [0.12, 0.30], [0.22, 0.26], [0.32, 0.44], [0.42, 0.52], [0.52, 0.72], [0.58, 0.86]];
+  const pts = [[0.02, 0.18], [0.12, 0.30], [0.22, 0.26], [0.32, 0.44], [0.42, 0.52], [0.52, 0.72], [0.58, 0.78]];
   for (let i = 0; i + 1 < pts.length; i++) {
     cv.line(x + w * pts[i][0], y + h * pts[i][1], x + w * pts[i + 1][0], y + h * pts[i + 1][1], RED, 3);
   }
@@ -537,7 +537,7 @@ function heroSelloff(cv: Canvas, x: number, y: number, w: number, h: number): vo
   });
   cv.rect(x + 8, y + 8, 96, 18, RED); drawText(cv, sansB, 11, x + 56, y + 21, "AI SELL-OFF", WHITE, "c");
   cv.rect(x + 8, y + h - 24, 128, 16, WHITE); drawText(cv, sansB, 9, x + 72, y + h - 12, "ASIA, FRIDAY'S CLOSE", INK, "c");
-  drawText(cv, sans, 8, x + w * 0.62, y + h - 12, "Closing prices", [180, 190, 220]);
+  drawText(cv, sans, 8, x + w - 10, y + 20, "Closing prices", [180, 190, 220], "r");
 }
 
 // ---------- mid scenes (w ~190, h ~48) ----------
@@ -612,7 +612,7 @@ function midJapan(cv: Canvas, x: number, y: number, w: number, h: number): void 
   bars.forEach((bh, i) => cv.rect(x + 12 + i * 16, y + h - 8 - bh, 11, bh, RED));
   cv.line(x + 8, y + 8, x + 76, y + h - 30, RED, 2);
   drawText(cv, sansB, 20, x + 92, y + 34, "2.3%", INK);
-  drawText(cv, sans, 8, x + 92, y + 46, "OCT CPI", GREY);
+  drawText(cv, sansB, 8, x + 92, y + 46, "OCT CPI", INK);
   cv.circle(x + w - 18, y + 14, 10, RED); drawText(cv, sansB, 11, x + w - 18, y + 18, "¥", WHITE, "c");
 }
 function midKorea(cv: Canvas, x: number, y: number, w: number, h: number): void {
@@ -635,12 +635,12 @@ function midKenya(cv: Canvas, x: number, y: number, w: number, h: number): void 
   cv.line(x + 46, y + 26, x + 70, y + 26, INK, 2);
   cv.line(x + 50, y + 16, x + 66, y + 16, INK, 2);
   cv.line(x + 58, y + 6, x + 82, y + 10, INK, 2);
-  drawText(cv, sansB, 10, x + 100, y + 40, "TURKANA", INK);
+  drawText(cv, sansB, 10, x + 100, y + 30, "TURKANA", INK);
   drawText(cv, sans, 8, x + 100, y + h - 10, "FIRST OIL", [90, 50, 20]);
 }
 function midBukele(cv: Canvas, x: number, y: number, w: number, h: number): void {
   cv.rect(x, y, w, h, [36, 84, 160]);
-  cv.rect(x + 24, y + 14, 52, 26, WHITE); cv.rect(x + 40, y + 14, 20, 4, INK);
+  cv.rect(x + 24, y + 8, 52, 26, WHITE); cv.rect(x + 40, y + 8, 20, 4, INK);
   cv.poly([[x + 52, y + 2], [x + 62, y + 12], [x + 44, y + 12]], WHITE);
   drawText(cv, sansB, 9, x + 24, y + h - 6, "EL SALVADOR", WHITE);
   cv.rect(x + w - 78, y + 6, 72, 15, RED); drawText(cv, sansB, 9, x + w - 42, y + 17, "3RD TERM", WHITE, "c");
@@ -653,7 +653,7 @@ function midCricket(cv: Canvas, x: number, y: number, w: number, h: number): voi
   cv.line(x + 120, y + 8, x + 150, y + 40, [210, 180, 130], 5);
   cv.circle(x + 158, y + 42, 4, RED);
   drawText(cv, sansB, 22, x + 60, y + 42, "118", WHITE);
-  drawText(cv, sansB, 8, x + w - 6, y + h - 6, "PHILLIPS", WHITE, "r");
+  drawText(cv, sansB, 8, x + 8, y + h - 6, "PHILLIPS", WHITE);
 }
 
 // ---------- world map ----------
@@ -759,12 +759,12 @@ function main(): void {
 
   // stat strip: 6 big numbers
   const stats: [string, string][] = [
-    ["3", "bridges hit in Kyiv"],
-    ["300,000+", "moved to shelters before Akvan"],
-    ["−6.2%", "Taiwan index, Friday close"],
-    ["100,000", "youth visas a year, UK–EU"],
-    ["2.3%", "Japan CPI in October"],
-    ["118", "Phillips runs v India"],
+    ["3", "bridges hit"],
+    ["300,000+", "moved to shelters"],
+    ["−6.2%", "Taiwan index Friday"],
+    ["100,000", "youth visas a year"],
+    ["2.3%", "Japan CPI in Oct"],
+    ["118", "Phillips v India"],
   ];
   const sw = CW / 6;
   stats.forEach((s, i) => {
@@ -782,8 +782,8 @@ function main(): void {
   let rx = M;
   for (const [label, n, col] of regions) {
     const rw = (n / 35) * CW;
-    cv.rect(rx, 142, rw, 15, col);
-    drawText(cv, sansB, 9, rx + rw / 2, 153, label, WHITE, "c");
+    cv.rect(rx, 144, rw, 15, col);
+    drawText(cv, sansB, 9, rx + rw / 2, 155, label, WHITE, "c");
     rx += rw;
   }
 
@@ -791,13 +791,13 @@ function main(): void {
   const hw = 326, hgap = 11;
   HEROES.forEach((hero, i) => {
     const x = M + i * (hw + hgap);
-    hero.scene(cv, x, 162, hw, 112);
-    cv.rect(x, 274, hw, 19, RED);
-    drawText(cv, sansB, 11, x + 8, 287, hero.banner, WHITE);
-    drawText(cv, sansB, 9, x, 302, hero.kicker, RED);
+    hero.scene(cv, x, 164, hw, 112);
+    cv.rect(x, 276, hw, 19, RED);
+    drawText(cv, sansB, 11, x + 8, 289, hero.banner, WHITE);
+    drawText(cv, sansB, 9, x, 304, hero.kicker, RED);
     const headLines = wrapText(serifB, 13, hero.head, hw);
-    drawPara(cv, serifB, 13, x, 306, hero.head, INK, hw, 15);
-    const deckY = 306 + headLines.length * 15 + 4;
+    drawPara(cv, serifB, 13, x, 308, hero.head, INK, hw, 15);
+    const deckY = 308 + headLines.length * 15 + 4;
     drawPara(cv, sans, 9.5, x, deckY, hero.deck, INK, hw, 11.5);
   });
 
@@ -806,7 +806,7 @@ function main(): void {
   MIDS.forEach((mid, i) => {
     const row = Math.floor(i / 5), col = i % 5;
     const x = M + col * (mw + mgap);
-    const y = 378 + row * 134;
+    const y = 380 + row * 134;
     mid.scene(cv, x, y, mw, 52);
     cv.rect(x, y + 52, mw, 2, INK);
     drawText(cv, sansB, 8, x, y + 64, mid.kicker, RED);
@@ -817,12 +817,12 @@ function main(): void {
   });
 
   // map + also-on
-  drawText(cv, sansB, 12, M, 654, "WHERE IT HAPPENED", INK);
-  drawMap(cv, M, 660, 340, 202);
-  drawText(cv, sansB, 11, 364, 654, "ALSO ON FRIDAY 20 NOVEMBER 2026 — 22 MORE STORIES", RED);
+  drawText(cv, sansB, 12, M, 656, "WHERE IT HAPPENED", INK);
+  drawMap(cv, M, 662, 340, 202);
+  drawText(cv, sansB, 11, 364, 656, "ALSO ON FRIDAY 20 NOVEMBER 2026 — 22 MORE STORIES", RED);
   const colW = 318;
   for (let c = 0; c < 2; c++) {
-    let ay = 662;
+    let ay = 664;
     const items = ALSO.slice(c * 11, c * 11 + 11);
     items.forEach((item, k) => {
       const n = String(14 + c * 11 + k);
@@ -840,15 +840,15 @@ function main(): void {
       ay += 3.5;
     });
   }
-  drawText(cv, sans, 8, M, 874, "Each number is the story with that number on this page.", GREY);
+  drawText(cv, sans, 8, M, 876, "Each number is the story with that number on this page.", GREY);
 
   // date check
-  cv.strokeRect(M, 882, CW, 84, RED, 2);
-  drawText(cv, sansB, 11, M + 10, 900, "DATE CHECK", RED);
-  drawPara(cv, sans, 9.5, M + 10, 904, DATE_CHECK, INK, CW - 20, 13);
+  cv.strokeRect(M, 884, CW, 84, RED, 2);
+  drawText(cv, sansB, 11, M + 10, 902, "DATE CHECK", RED);
+  drawPara(cv, sans, 9.5, M + 10, 906, DATE_CHECK, INK, CW - 20, 13);
 
   // footer
-  drawText(cv, sans, 9, M + CW / 2, 982, "Every story here happened, or was first reported, on Friday 20 November 2026. Sources named beside each story · Original drawings", GREY, "c");
+  drawText(cv, sans, 9, M + CW / 2, 984, "Every story here happened, or was first reported, on Friday 20 November 2026. Sources named beside each story · Original drawings", GREY, "c");
 
   cv.grain(42000, 10);
   cv.fibre(1);
